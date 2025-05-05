@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rzucam Palenie</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    .counter { font-size: 24px; margin: 20px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    button { padding: 10px 20px; font-size: 16px; }
+    #plus-btn { font-size: 24px; padding: 0 10px; }
+  </style>
+</head>
+<body>
+  <h1>Rzucam Palenie</h1>
+  <div id="setup">
+    <label>Wprowadź datę i godzinę rzucenia palenia:</label><br>
+    <input type="datetime-local" id="quit-time">
+    <button onclick="startQuit()">Start</button>
+  </div>
+
+  <div id="main" style="display:none;">
+    <div class="counter">
+      Nie palisz od: <span id="time-since"></span>
+    </div>
+
+    <h2>Ilość ściągniętych buchów: <span id="puff-count">0</span>
+      <button id="plus-btn" onclick="addPuff()">+</button>
+    </h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Data</th>
+          <th>Godzina</th>
+        </tr>
+      </thead>
+      <tbody id="puff-log">
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let quitTime;
+    let interval;
+
+    function startQuit() {
+      const input = document.getElementById("quit-time").value;
+      if (!input) return alert("Wprowadź poprawną datę i godzinę.");
+      quitTime = new Date(input);
+      localStorage.setItem("quitTime", quitTime.toISOString());
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("main").style.display = "block";
+      startTimer();
+    }
+
+    function startTimer() {
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+      const now = new Date();
+      const diff = now - new Date(quitTime);
+      if (diff < 0) return;
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      document.getElementById("time-since").textContent =
+        `${days} dni, ${hours} godz., ${minutes} min, ${seconds} sek.`;
+    }
+
+    function addPuff() {
+      const puffData = JSON.parse(localStorage.getItem("puffs") || "[]");
+      const now = new Date();
+      puffData.push(now.toISOString());
+      localStorage.setItem("puffs", JSON.stringify(puffData));
+      updatePuffDisplay();
+    }
+
+    function updatePuffDisplay() {
+      const puffData = JSON.parse(localStorage.getItem("puffs") || "[]");
+      document.getElementById("puff-count").textContent = puffData.length;
+      const tbody = document.getElementById("puff-log");
+      tbody.innerHTML = "";
+      puffData.forEach((puff, index) => {
+        const date = new Date(puff);
+        const row = `<tr><td>${index + 1}</td><td>${date.toLocaleDateString()}</td><td>${date.toLocaleTimeString()}</td></tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    // Inicjalizacja przy ponownym otwarciu strony
+    window.onload = function() {
+      const savedTime = localStorage.getItem("quitTime");
+      if (savedTime) {
+        quitTime = new Date(savedTime);
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("main").style.display = "block";
+        startTimer();
+        updatePuffDisplay();
+      }
+    }
+  </script>
+</body>
+</html>
