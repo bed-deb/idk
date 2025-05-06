@@ -5,17 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rzucam Palenie</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="https://i.imgur.com/l3q7BpK.jpeg" type="image/jpeg">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
     .counter { font-size: 24px; margin: 20px 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    button { padding: 10px 20px; font-size: 16px; }
-    #plus-btn { font-size: 24px; padding: 0 10px; }
+    button { padding: 10px; font-size: 16px; margin: 5px; }
+    #plus-btn, #minus-btn { font-size: 24px; padding: 0 12px; }
   </style>
 </head>
 <body>
   <h1>Rzucam Palenie</h1>
+
   <div id="setup">
     <label>Wprowadź datę i godzinę rzucenia palenia:</label><br>
     <input type="datetime-local" id="quit-time">
@@ -25,28 +27,36 @@
   <div id="main" style="display:none;">
     <div class="counter">
       Nie palisz od: <span id="time-since"></span>
+      <div id="edit-quit-time" style="display:none; margin-top:10px;">
+        <input type="datetime-local" id="new-quit-time">
+        <button onclick="saveQuitTime()">Zapisz nową datę</button>
+      </div>
     </div>
 
-    <h2>Ilość ściągniętych buchów: <span id="puff-count">0</span>
+    <h2>
+      Ilość ściągniętych buchów: <span id="puff-count">0</span><br>
       <button id="plus-btn" onclick="addPuff()">+</button>
+      <button id="minus-btn" onclick="removeLastPuff()">–</button>
+      <button onclick="toggleEdit()">Edycja</button>
     </h2>
 
-    <table>
+    <table id="puff-table">
       <thead>
         <tr>
           <th>#</th>
           <th>Data</th>
           <th>Godzina</th>
+          <th class="edit-col" style="display:none;">Akcje</th>
         </tr>
       </thead>
-      <tbody id="puff-log">
-      </tbody>
+      <tbody id="puff-log"></tbody>
     </table>
   </div>
 
   <script>
     let quitTime;
     let interval;
+    let editMode = false;
 
     function startQuit() {
       const input = document.getElementById("quit-time").value;
@@ -60,6 +70,7 @@
 
     function startTimer() {
       updateTimer();
+      clearInterval(interval);
       interval = setInterval(updateTimer, 1000);
     }
 
@@ -84,19 +95,61 @@
       updatePuffDisplay();
     }
 
+    function removeLastPuff() {
+      const puffData = JSON.parse(localStorage.getItem("puffs") || "[]");
+      puffData.pop();
+      localStorage.setItem("puffs", JSON.stringify(puffData));
+      updatePuffDisplay();
+    }
+
+    function removePuff(index) {
+      const puffData = JSON.parse(localStorage.getItem("puffs") || "[]");
+      puffData.splice(index, 1);
+      localStorage.setItem("puffs", JSON.stringify(puffData));
+      updatePuffDisplay();
+    }
+
+    function toggleEdit() {
+      editMode = !editMode;
+      document.querySelectorAll(".edit-col").forEach(el => {
+        el.style.display = editMode ? "" : "none";
+      });
+      document.getElementById("edit-quit-time").style.display = editMode ? "block" : "none";
+      updatePuffDisplay();
+    }
+
+    function saveQuitTime() {
+      const input = document.getElementById("new-quit-time").value;
+      if (!input) return alert("Wprowadź poprawną datę i godzinę.");
+      quitTime = new Date(input);
+      localStorage.setItem("quitTime", quitTime.toISOString());
+      updateTimer();
+    }
+
     function updatePuffDisplay() {
       const puffData = JSON.parse(localStorage.getItem("puffs") || "[]");
       document.getElementById("puff-count").textContent = puffData.length;
       const tbody = document.getElementById("puff-log");
       tbody.innerHTML = "";
+
       puffData.forEach((puff, index) => {
         const date = new Date(puff);
-        const row = `<tr><td>${index + 1}</td><td>${date.toLocaleDateString()}</td><td>${date.toLocaleTimeString()}</td></tr>`;
-        tbody.innerHTML += row;
+        const row = document.createElement("tr");
+
+        let content = `
+          <td>${index + 1}</td>
+          <td>${date.toLocaleDateString()}</td>
+          <td>${date.toLocaleTimeString()}</td>
+          <td class="edit-col" style="display:${editMode ? '' : 'none'}">
+            <button onclick="removePuff(${index})">Usuń</button>
+          </td>
+        `;
+
+        row.innerHTML = content;
+        tbody.appendChild(row);
       });
     }
 
-    // Inicjalizacja przy ponownym otwarciu strony
     window.onload = function() {
       const savedTime = localStorage.getItem("quitTime");
       if (savedTime) {
