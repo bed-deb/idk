@@ -1,15 +1,15 @@
 {
   "name": "Rzucam Palenie",
-  "short_name": "NiePalę",
+  "short_name": "Rzuć palenie!",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#f4f4f4",
   "theme_color": "#4CAF50",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "https://i.imgur.com/l3q7BpK.jpeg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ]
 }
